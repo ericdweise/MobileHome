@@ -30,7 +30,7 @@ if [ -z $DEV_UUID ]; then
     exit '101'
 fi
 TEST=$(grep "$DEV_UUID" /etc/fstab)
-if [ TEST ]; then
+if [ ! -z $TEST ]; then
     echo "The Device UUID $DEV_UUID is already in fstab."
     exit '102'
 fi
@@ -55,7 +55,7 @@ echo "UUID=$DEV_UUID	$MOUNT_POINT	auto	rw,uid=$USER_UID,gid=$USER_UID,x-systemd.
 sudo systemctl daemon-reload
 sudo systemctl restart local-fs.target
 
- check that systemd services have been created and are active
+# check that systemd services have been created and are active
 TEST=$(systemctl is-active $UNIT_FILE.mount)
 if [ ! TEST='active' ]; then
     echo "Service is not active: $UNIT_FILE.mount"
