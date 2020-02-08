@@ -1,0 +1,7 @@
+.fseventsd
+.Spotlight-V100
+.Trash-1000
+.Trashes
+.TemporaryItems
+._*
+.mhcontrol
