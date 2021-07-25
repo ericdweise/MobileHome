@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# MobileHome is an automount system for USB drives.
+#
+# ARGS:
+# 1 - device to be automounted, e.g. /dev/sdb2
+
+set -uo pipefail
+
+## Constants
+SHARE_DIR="$HOME/.local/share/mobilehome"
+KEYFILE="$HOME/.local/share/mobilehome/mhcrypt"
+MOUNT_POINT="/home/mobilehome"
+
+# Check argument is provided
+if [ -z $1 ]; then
+    echo 'ERROR: No argument provided.' 1>&2
+    exit 1
+fi
+
+# Ensure that device is a block device
+if [ ! -b $1 ]; then
+    echo "ERROR: $1 is NOT a block device." 1>&2
+    exit 1
+fi
+
+# Decrypt
+if [ -a /dev/mapper/mobilehome ]; then
+    echo "ERROR: A mobilehome device is already opened." 1>&2
+    exit 1
+fi
+sudo cryptsetup open $1 mobilehome --key-file $KEYFILE
+
+# Mount
+sudo mount /dev/mapper/mobilehome -o rw,uid="$(whoami)"

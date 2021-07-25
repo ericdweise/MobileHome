@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# MobileHome is an automount system for encrypted USB drives.
+
+set -euo pipefail
+
+# CONSTANTS
+BIN_DIR="$HOME/.local/bin"
+SHARE_DIR="$HOME/.local/share/mobilehome"
+KEYFILE="$SHARE_DIR/mhcrypt"
+MOUNT_POINT="/home/mobilehome"
+
+
+if ! [ -d $BIN_DIR ]; then
+    mkdir -p $BIN_DIR
+fi
+
+if ! [ -d $SHARE_DIR ]; then
+    mkdir -p $SHARE_DIR
+fi
+
+if ! [ -f $KEYFILE ]; then
+    echo "*** Creating new passphrase file: $KEYFILE"
+    dd if=/dev/random of=$KEYFILE bs=256 count=1
+    chmod 0400 $KEYFILE
+fi
+
+# Make Mount Point
+if ! [ -d $MOUNT_POINT ]; then
+    mkdir -p $MOUNT_POINT
+fi
+
+#TODO: Make sure ~/.local/bin is in PATH
+
+# Copy scripts to bin
+cp host/mh-mount $BIN_DIR
+cp host/mh-automount $BIN_DIR
+cp host/mh-format-drive $BIN_DIR
+cp host/partitions.sfdisk $SHARE_DIR

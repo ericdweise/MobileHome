@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# MobileHome is an automount system for USB drives.
+#
+# ARGS:
+# 1 - device to be automounted, e.g. /dev/sdb2
+
+set -uo pipefail
+
+
+# CONSTANTS
+SHARE_DIR="$HOME/.local/share/mobilehome"
+KEYFILE="$SHARE_DIR/mhcrypt"
+MOUNT_POINT="/home/mobilehome"
+SYSD_MOUNT="${MOUNT_POINT//'/'/'-'}"
+SYSD_MOUNT="${SYSD_MOUNT/'-'/''}"
+USER_ID="$(whoami)"
+
+# Check argument is provided
+if [ -z $1 ]; then
+    echo 'No argument provided.' 1>&2
+    exit 1
+fi
+
+# Ensure that device is a block device
+if [ ! -b $1 ]; then
+    echo "$1 is NOT a block device. Exiting installation" 1>&2
+    exit 1
+fi
+
+# Find UUID of mobilehome device
+UUID=$(sudo blkid -o value -s UUID $1)
+echo "*** DEVICE UUID: '$UUID'"
+if [ -z $UUID ]; then
+    echo 'No Device UUID found' 1>&2
+    exit 1
+fi
+
+# Create mount point
+if [ ! -d "$MOUNT_POINT" ]; then
+    echo "ERROR: Mount point does not exist: $MOUNT_POINT" 1>&2
+    exit 1
+fi
+
+# Check that keyfile exists and can unlock this drive
+if ! [[ -f $KEYFILE ]]; then
+    echo "ERROR: LUKS key file not found. Expected at: $KEYFILE" 1>&2
+    exit 1
+fi
+
+sudo cryptsetup open /dev/disk/by-uuid/$UUID mobilehome --key-file $KEYFILE
+if [[ $? -ne 0 ]]; then
+    echo "ERROR: Keyfile cannot open encrypted partition. Use mh-format-drive add-keyfile PARTITION"
+    exit1
+else
+    sudo cryptsetup close mobilehome
+fi
+
+# Add drive to /etc/crypttab
+echo '*** Editing /etc/crypttab'
+printf '\n# Added by MobileHome\n' | sudo tee -a /etc/crypttab
+echo "mobilehome /dev/disk/by-uuid/$UUID $KEYFILE luks" | sudo tee -a /etc/crypttab
+
+# Add line to /etc/fstab
+echo '*** Editing /etc/fstab'
+printf '\n# Added by MobileHome\n' | sudo tee -a /etc/fstab
+echo "/dev/mapper/mobilehome	$MOUNT_POINT	ext4	rw,x-systemd.automount,x-systemd.device-timeout=2,noauto,nofail	0	2" | sudo tee -a /etc/fstab
+
+## Save automount services in SystemD
+echo '*** Saving automount services and reloading SystemD services'
+sudo systemctl daemon-reload
+sudo systemctl restart local-fs.target
+
+# Mount drive and change permissions of mountpoint
+echo "*** Changing ownership of mount point '$MOUNT_POINT' from 'root' to '$USER_ID'"
+sudo mount $MOUNT_POINT
+sudo chown $USER_ID:$USER_ID $MOUNT_POINT
+
+# check that systemd services have been created and are active
+echo '*** The following SystemD services should now be active:'
+echo " - $SYSD_MOUNT.mount)"
+echo " - $SYSD_MOUNT.automount)"
+echo " Try running 'systemctl status' to see their state"
+
+echo '*** All finished'
