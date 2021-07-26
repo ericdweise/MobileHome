@@ -32,4 +32,4 @@ fi
 sudo cryptsetup open $1 mobilehome --key-file $KEYFILE
 
 # Mount
-sudo mount /dev/mapper/mobilehome -o rw,uid="$(whoami)"
+sudo mount /dev/mapper/mobilehome $MOUNT_POINT -o rw,uid="$(whoami)"
