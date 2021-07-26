@@ -12,6 +12,12 @@ SHARE_DIR="$HOME/.local/share/mobilehome"
 KEYFILE="$HOME/.local/share/mobilehome/mhcrypt"
 MOUNT_POINT="/home/mobilehome"
 
+if [ $1 == '-u' ]; then
+    sudo umount $MOUNT_POINT
+    sudo cryptsetup close mobilehome
+    exit 0
+fi
+
 # Check argument is provided
 if [ -z $1 ]; then
     echo 'ERROR: No argument provided.' 1>&2
@@ -32,4 +38,4 @@ fi
 sudo cryptsetup open $1 mobilehome --key-file $KEYFILE
 
 # Mount
-sudo mount /dev/mapper/mobilehome $MOUNT_POINT -o rw,uid="$(whoami)"
+sudo mount /dev/mapper/mobilehome $MOUNT_POINT -o rw
